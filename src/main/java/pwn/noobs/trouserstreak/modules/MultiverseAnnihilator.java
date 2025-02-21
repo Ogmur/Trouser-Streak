@@ -15,7 +15,7 @@ import meteordevelopment.meteorclient.events.game.ReceiveMessageEvent;
 
 import java.util.*;
 
-public class MultiverseDeleter extends Module {
+public class MultiverseAnnihilator extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<Integer> delay = sgGeneral.add(new IntSetting.Builder()
@@ -32,12 +32,10 @@ public class MultiverseDeleter extends Module {
     private int totalPages = 1;
     private final List<String> worldsToDelete = new ArrayList<>();
     private final Set<String> deletedWorlds = new HashSet<>();
-    private boolean deletingWorlds = false;
-    private boolean waitingForWorlds = false;
     private int deleteIndex = 0;
 
-    public MultiverseDeleter() {
-        super(Trouser.Main, "MultiverseDeleter", "Effortlessly deletes all Multiverse worlds! Made by https://youtube.com/@ogmur");
+    public MultiverseAnnihilator() {
+        super(Trouser.Main, "MultiverseAnnihilator", "Effortlessly deletes all Multiverse worlds! Made by https://youtube.com/@ogmur");
     }
 
     @Override
@@ -51,7 +49,6 @@ public class MultiverseDeleter extends Module {
 
         ChatUtils.info("Starting MVDeleter...");
         sendCommand("mv list 1");
-        waitingForWorlds = true;
     }
 
     @EventHandler
@@ -70,9 +67,7 @@ public class MultiverseDeleter extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
-        if (waitingForWorlds) return;
-
-        if (deletingWorlds && timer <= 0) {
+        if (worldsToDelete.size() > 1 && timer <= 0) {
             if (deleteIndex < worldsToDelete.size()) {
                 String worldName = worldsToDelete.get(deleteIndex);
 
@@ -89,7 +84,6 @@ public class MultiverseDeleter extends Module {
                 ChatUtils.info("Confirming deletion.");
                 timer = delay.get() * 2;
             } else {
-                deletingWorlds = false;
                 toggle();
                 ChatUtils.info("§cAll worlds deleted.");
             }
@@ -102,6 +96,12 @@ public class MultiverseDeleter extends Module {
     public void onMessageReceive(ReceiveMessageEvent event) {
         if (event.getMessage() != null && mc.player != null) {
             String message = event.getMessage().getString();
+
+            if (message.contains("Unknown")) {
+                ChatUtils.error("§cMultiverse not detected. Module disabled.");
+                toggle();
+                return;
+            }
 
             if (message.contains("====[ Multiverse World List ]====")) {
                 ChatUtils.info("World list found, extracting worlds...");
@@ -142,27 +142,12 @@ public class MultiverseDeleter extends Module {
                 if (currentPage < totalPages) {
                     currentPage++;
                     sendCommand("mv list " + currentPage);
-                    waitingForWorlds = true;
                     timer = delay.get();
                     ChatUtils.info("Fetching page " + currentPage + " of " + totalPages + "...");
-                } else {
-                    ChatUtils.info("Finished fetching all pages.");
-                    waitingForWorlds = false;
-                    startDeletingWorlds();
                 }
             }
         } catch (NumberFormatException e) {
             ChatUtils.error("Failed to parse page information: " + e.getMessage());
-        }
-    }
-
-    private void startDeletingWorlds() {
-        if (!worldsToDelete.isEmpty()) {
-            deletingWorlds = true;
-            ChatUtils.info("Starting deletion of " + worldsToDelete.size() + " worlds.");
-        } else {
-            ChatUtils.info("No worlds found to delete.");
-            toggle();
         }
     }
 
@@ -178,8 +163,6 @@ public class MultiverseDeleter extends Module {
         totalPages = 1;
         worldsToDelete.clear();
         deletedWorlds.clear();
-        deletingWorlds = false;
-        waitingForWorlds = false;
         deleteIndex = 0;
     }
 }
